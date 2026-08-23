@@ -1,0 +1,28 @@
+**********************
+PowerShell transcript start
+Start time: 20260823150440
+Username: PA-mike\student
+RunAs User: PA-mike\student
+Configuration Name: 
+Machine: PA-mike (Microsoft Windows NT 10.0.26100.0)
+Host Application: C:\Program Files\WindowsApps\Microsoft.PowerShell_7.6.5.0_x64__8wekyb3d8bbwe\pwsh.dll -noexit -command try { . "c:\Program Files\Microsoft VS Code\110a328ea5\resources\app\out\vs\workbench\contrib\terminal\common\scripts\shellIntegration.ps1" } catch {}
+Process ID: 2868
+PSVersion: 7.6.5
+PSEdition: Core
+GitCommitId: 7.6.5
+OS: Microsoft Windows 10.0.26100
+Platform: Win32NT
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1, 6.0, 7.0
+PSRemotingProtocolVersion: 2.4
+SerializationVersion: 1.1.0.1
+WSManStackVersion: 3.0
+**********************
+Transcript started, output file is .\create-resourcegroup.log.txt
+PS>TerminatingError(New-AzResourceGroup): "The running command stopped because the preference variable "ErrorActionPreference" or common parameter is set to Stop: Run Connect-AzAccount to login."
+Failed to create resource group 'myRG1'.
+Error: Run Connect-AzAccount to login.
+Script execution finished.
+**********************
+PowerShell transcript end
+End time: 20260823150440
+**********************
