@@ -1,6 +1,6 @@
 **********************
 PowerShell transcript start
-Start time: 20260827115415
+Start time: 20260827132114
 Username: PA-mike\student
 RunAs User: PA-mike\student
 Configuration Name: 
@@ -22,17 +22,11 @@ PSRemotingProtocolVersion: 2.4
 SerializationVersion: 1.1.0.1
 WSManStackVersion: 3.0
 **********************
-Transcript started, output file is .\create-resourcegroup.log.txt
-
-ResourceGroupName : TestRG4
-Location          : centralus
-ProvisioningState : Succeeded
-Tags              : 
-ResourceId        : /subscriptions/d16565b1-4114-4905-b381-b42c50291594/resourceGroups/TestRG4
-
-Resource group 'TestRG4' created successfully.
-Script execution finished.
+Confirm
+Provided resource group already exists. Are you sure you want to update it?
+&Yes  &No  &Suspend
+Y
 **********************
 PowerShell transcript end
-End time: 20260827115417
+End time: 20260827132145
 **********************
