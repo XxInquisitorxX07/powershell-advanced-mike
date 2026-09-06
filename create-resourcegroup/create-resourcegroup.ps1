@@ -46,7 +46,7 @@ function New-TestResourceGroup {
         # Start logging script activity to a log file
         # -WhatIf:$false and -Confirm:$false opt logging out of ShouldProcess so that
         # only the resource group creation is governed by -WhatIf and -Confirm
-        Start-Transcript -Path ".\create-resourcegroup.log.txt" -WhatIf:$false -Confirm:$false
+        Start-Transcript -Path (Join-Path $PSScriptRoot "..\output\create-resourcegroup.log.txt") -WhatIf:$false -Confirm:$false
         Write-Verbose "Starting resource group creation process."
         Write-Debug "DebugPreference is set to $DebugPreference"
     }
