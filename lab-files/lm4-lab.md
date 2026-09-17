@@ -70,3 +70,15 @@ $results | Where-Object { $_ -is [string] }
 ### Issue Found
 
 `$results.Count` showed 7 instead of 5. The two transcript messages were also being captured in `$results` as strings, which added the extra 2 items. That could cause problems for anything using the results later, like `Group-Object` or `Export-Csv`, because the output would contain both resource group objects and unrelated text. I will fix this in Task 6 by sending the transcript messages to `Out-Null`.
+
+## Task 6: Add Execution Statistics
+
+I added four counters to track the total requests, created resource groups, skipped resource groups, and errors. The counters are set to zero in the `begin` block, increased in the `process` block depending on what happens with each request, and then displayed in the `end` block as the final run summary.
+
+Before trying to create anything, the function now uses `Get-AzResourceGroup` to check whether the resource group already exists. This check happens before `ShouldProcess` so an existing group can be skipped cleanly instead of asking for confirmation or trying to update something that is already there.
+
+I also fixed the Task 5 issue where the transcript start and stop messages were getting mixed into the function output. Adding `| Out-Null` to the transcript commands keeps those strings out of the pipeline, so the results only contain the resource group objects.
+
+I tested three different situations. The first test processed five existing resource groups and showed 5 skipped, 0 created, and 0 errors, and `$results.Count` returned 5, which confirmed the transcript fix worked. The second test used one existing group and one new group, and the summary correctly showed 1 skipped and 1 created. The third test used an invalid tag name, and the function caught the Azure error and showed 1 error with nothing created or skipped.
+
+The main thing I learned is that every request should end in only one result: created, skipped, or failed. Because each request only increases one of those counters, the created, skipped, and error totals should always add back up to the total requests processed.
