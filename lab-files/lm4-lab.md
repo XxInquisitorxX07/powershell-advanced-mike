@@ -33,3 +33,15 @@ In the `begin` block, I set the start time, request counter, and location. These
 I tested it by piping in three `ProjectID` values, and the function processed all three resource groups separately. The final run created `RG-1002`, `RG-1003`, and `RG-1004`, but only produced one run summary showing three requests processed and the total elapsed time.
 
 The `begin`, `process`, and `end` blocks were already part of the function from LM3, but this task helped show why they matter. The counter and timing only work correctly because `begin` runs once while `process` handles each resource group individually.
+
+## Task 4: Improve User Feedback
+
+I added verbose messages to make it easier to see what the function is doing without always showing extra information. The `[START]` message is in the `begin` block, `[VALIDATION]` is in the `process` block after the resource group name is determined, `[ATTEMPT]` runs before the Azure creation command, `[SUCCESS]` runs after the resource group is created, and `[COMPLETE]` is in the `end` block after all requests are finished.
+
+The validation message has to be inside `process` because `ValidatePattern` checks the parameter before the function body even starts. If the value does not pass validation, PowerShell stops it before any of my verbose messages inside the function would run.
+
+I used `Write-Verbose` instead of `Write-Host` because the extra information stays hidden during a normal run and only appears when the admin uses `-Verbose`. This keeps the normal output clean but still gives more detail when troubleshooting.
+
+I tested the function normally, with `-WhatIf -Verbose`, and with a real creation using `-Verbose`. The normal run did not show the verbose messages, the `-WhatIf` test showed `[START]`, `[VALIDATION]`, `[SKIPPED]`, and `[COMPLETE]`, and the real run also showed the `[ATTEMPT]` and `[SUCCESS]` messages.
+
+I also learned that `-Verbose` gets passed along to what the function calls. `New-AzResourceGroup` displayed its own verbose message about creating the resource group, and `ShouldProcess` displayed a message about the operation it was approving.
