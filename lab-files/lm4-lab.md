@@ -45,3 +45,28 @@ I used `Write-Verbose` instead of `Write-Host` because the extra information sta
 I tested the function normally, with `-WhatIf -Verbose`, and with a real creation using `-Verbose`. The normal run did not show the verbose messages, the `-WhatIf` test showed `[START]`, `[VALIDATION]`, `[SKIPPED]`, and `[COMPLETE]`, and the real run also showed the `[ATTEMPT]` and `[SUCCESS]` messages.
 
 I also learned that `-Verbose` gets passed along to what the function calls. `New-AzResourceGroup` displayed its own verbose message about creating the resource group, and `ShouldProcess` displayed a message about the operation it was approving.
+
+## Task 5: Process Multiple Resource Groups
+
+I created `ResourceGroups.txt` with five project IDs, one per line. I used new `ProjectID` values so `New-AzResourceGroup` would actually create new resource groups instead of running against ones that already existed and possibly prompting or updating them.
+
+Commands used:
+
+```powershell
+Set-Content -Path .\lab-files\ResourceGroups.txt -Value "1006","1007","1008","1009","1010"
+Get-Content .\lab-files\ResourceGroups.txt | New-TestResourceGroup -WhatIf
+$results = Get-Content .\lab-files\ResourceGroups.txt | New-TestResourceGroup
+$results.Count
+$results | Group-Object Status | Select-Object Name, Count
+$results | Where-Object { $_ -is [string] }
+```
+
+### Results
+
+- Objects processed: 5
+- Successfully created: 5 (`RG-1006` through `RG-1010`)
+- Warnings generated: None
+
+### Issue Found
+
+`$results.Count` showed 7 instead of 5. The two transcript messages were also being captured in `$results` as strings, which added the extra 2 items. That could cause problems for anything using the results later, like `Group-Object` or `Export-Csv`, because the output would contain both resource group objects and unrelated text. I will fix this in Task 6 by sending the transcript messages to `Out-Null`.
