@@ -23,3 +23,13 @@ The function checks `$PSCmdlet.ParameterSetName` to determine which parameter se
 I tested both parameter sets with `-WhatIf` and then created resource groups successfully with each one. I also tested using `ProjectID` and `ResourceGroupName` together, and PowerShell correctly rejected the command because they belong to different parameter sets.
 
 This makes the function easier to use while still preventing conflicting input.
+
+## Task 3: Implement Begin, Process, and End Blocks
+
+The `begin` block runs one time at the start of the function, the `process` block runs once for each item that comes through the pipeline, and the `end` block runs one time after everything is finished. This keeps the setup, individual work, and final summary separated.
+
+In the `begin` block, I set the start time, request counter, and location. These need to be set once before the pipeline starts, because if the counter were created inside `process`, it would reset every time a new resource group was handled.
+
+I tested it by piping in three `ProjectID` values, and the function processed all three resource groups separately. The final run created `RG-1002`, `RG-1003`, and `RG-1004`, but only produced one run summary showing three requests processed and the total elapsed time.
+
+The `begin`, `process`, and `end` blocks were already part of the function from LM3, but this task helped show why they matter. The counter and timing only work correctly because `begin` runs once while `process` handles each resource group individually.
