@@ -7,6 +7,7 @@ function New-TestResourceGroup {
         The name can be supplied directly with -ResourceGroupName, or generated
         automatically from a project ID with -ProjectID (naming convention: RG-<ProjectID>).
         Supports bulk creation through pipeline input and displays a summary when finished.
+        Use -Verbose to see step-by-step progress messages.
     .PARAMETER ResourceGroupName
         The full name of the Resource Group to create.
         Used in the 'ResourceGroupName' parameter set.
@@ -26,6 +27,9 @@ function New-TestResourceGroup {
         PS C:\> "1002","1003","1004" | New-TestResourceGroup
         Creates three Resource Groups (RG-1002, RG-1003, RG-1004) using pipeline input.
     .EXAMPLE
+        PS C:\> New-TestResourceGroup -ProjectID 1005 -Verbose
+        Creates 'RG-1005' and shows progress messages for each step.
+    .EXAMPLE
         PS C:\> New-TestResourceGroup -ProjectID 1001 -Tags @{Department="Dev";Environment="Development"}
         Creates 'RG-1001' with custom tags.
     .EXAMPLE
@@ -38,6 +42,7 @@ function New-TestResourceGroup {
         Date: 2026 Sep 06 - Added pipeline input, structured output, and ShouldProcess support
         Date: 2026 Sep 17 - Added ResourceGroupName and ProjectID parameter sets
         Date: 2026 Sep 17 - Added Begin/Process/End initialization, startup message, and run summary
+        Date: 2026 Sep 17 - Added verbose messages for start, validation, creation attempt, and completion
         Course: PowerShell Advanced
     #>
     [CmdletBinding(
@@ -79,7 +84,7 @@ function New-TestResourceGroup {
 
         # Startup message
         Write-Host "Starting New-TestResourceGroup at $($startTime.ToString('g')) (location: $location)"
-        Write-Verbose "Starting resource group creation process."
+        Write-Verbose "[START] Function started. Parameter set: '$($PSCmdlet.ParameterSetName)'."
         Write-Debug "DebugPreference is set to $DebugPreference"
     }
     process {
@@ -89,11 +94,13 @@ function New-TestResourceGroup {
         # Work out the final name based on which parameter set was used
         if ($PSCmdlet.ParameterSetName -eq 'ProjectID') {
             $rgName = "RG-$ProjectID"
+            # ValidatePattern already ran before this block; reaching here means input passed
+            Write-Verbose "[VALIDATION] ProjectID '$ProjectID' passed validation. Generated name: '$rgName'."
         }
         else {
             $rgName = $ResourceGroupName
+            Write-Verbose "[VALIDATION] ResourceGroupName '$rgName' passed validation."
         }
-        Write-Verbose "Parameter set '$($PSCmdlet.ParameterSetName)' used. Resource group name: '$rgName'."
 
         # Build the result object, defaulting to a failed state
         $result = [PSCustomObject]@{
@@ -111,21 +118,23 @@ function New-TestResourceGroup {
             )) {
             try {
                 # Attempt to create the resource group
-                Write-Verbose "Attempting to create resource group '$rgName' in '$location' location."
+                Write-Verbose "[ATTEMPT] Creating resource group '$rgName' in '$location' with tags: $($Tags.Keys -join ', ')."
                 Write-Debug "About to call New-AzResourceGroup with -ErrorAction Stop to ensure any errors are caught."
-                Write-Verbose "Applying tags: $($Tags.Keys -join ', ')"
                 New-AzResourceGroup `
                     -Name $rgName `
                     -Location $location `
                     -Tag $Tags `
                     -ErrorAction Stop | Out-Null
                 $result.Status = 'Created'
-                Write-Verbose "Resource group creation completed without errors."
+                Write-Verbose "[SUCCESS] Resource group '$rgName' created successfully."
             }
             catch {
                 # Handle any errors that occur during resource group creation
                 Write-Warning "Failed to create resource group '$rgName'. Error: $($_.Exception.Message)"
             }
+        }
+        else {
+            Write-Verbose "[SKIPPED] Creation of '$rgName' was not performed (WhatIf or Confirm declined)."
         }
 
         # Emit the structured result for this pipeline object
@@ -139,8 +148,7 @@ function New-TestResourceGroup {
         Write-Host "Requests processed : $processedCount"
         Write-Host "Elapsed time       : $([math]::Round($duration.TotalSeconds, 1)) seconds"
 
-        # Always stop the transcript when pipeline processing is finished
-        Write-Verbose "Stopping transcript and exiting function."
+        Write-Verbose "[COMPLETE] Processed $processedCount request(s). Stopping transcript."
         Write-Debug "Reached the end of the function execution block."
         Stop-Transcript -WhatIf:$false -Confirm:$false
     }
