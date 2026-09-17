@@ -3,40 +3,62 @@ function New-TestResourceGroup {
     .SYNOPSIS
         Creates a new Azure Resource Group
     .DESCRIPTION
-        This function creates a new Azure Resource Group with the specified name and location.
+        This function creates a new Azure Resource Group in the 'centralus' location.
+        The name can be supplied directly with -ResourceGroupName, or generated
+        automatically from a project ID with -ProjectID (naming convention: RG-<ProjectID>).
     .PARAMETER ResourceGroupName
-        The name of the Resource Group to create.
-        Accepts input from the pipeline.
+        The full name of the Resource Group to create.
+        Used in the 'ResourceGroupName' parameter set.
+    .PARAMETER ProjectID
+        A numeric project identifier. The Resource Group name is generated as RG-<ProjectID>.
+        Used in the 'ProjectID' parameter set. Accepts input from the pipeline.
     .PARAMETER Tags
         Optional hashtable of tags to apply to the Resource Group.
         Defaults to @{Department="IT"; Environment="Test"}.
     .EXAMPLE
-        PS C:\> New-TestResourceGroup -ResourceGroupName MyResourceGroup
-        This will create a new Resource Group named 'MyResourceGroup' in the 'centralus' location.
+        PS C:\> New-TestResourceGroup -ResourceGroupName Dev1
+        Creates a Resource Group named 'Dev1'.
     .EXAMPLE
-        PS C:\> New-TestResourceGroup -ResourceGroupName DevTest -Tags @{Department="Dev";Environment="Development"}
-        Creates a Resource Group with custom tags.
+        PS C:\> New-TestResourceGroup -ProjectID 1001
+        Creates a Resource Group named 'RG-1001'.
     .EXAMPLE
-        PS C:\> "DevTest" | New-TestResourceGroup
-        Creates a Resource Group named 'DevTest' using pipeline input.
+        PS C:\> "1001" | New-TestResourceGroup
+        Creates a Resource Group named 'RG-1001' using pipeline input.
     .EXAMPLE
-        PS C:\> "DevTest" | New-TestResourceGroup -WhatIf
+        PS C:\> New-TestResourceGroup -ProjectID 1001 -Tags @{Department="Dev";Environment="Development"}
+        Creates 'RG-1001' with custom tags.
+    .EXAMPLE
+        PS C:\> "1001" | New-TestResourceGroup -WhatIf
         Shows what would happen without creating the Resource Group.
     .OUTPUTS
         PSCustomObject with ResourceGroupName, Location, Status, Tags, and Timestamp properties.
     .NOTES
         Author: Mike Hagel 
         Date: 2026 Sep 06 - Added pipeline input, structured output, and ShouldProcess support
+        Date: 2026 Sep 17 - Added ResourceGroupName and ProjectID parameter sets
         Course: PowerShell Advanced
     #>
-    [CmdletBinding(SupportsShouldProcess = $true)]
+    [CmdletBinding(
+        SupportsShouldProcess = $true,
+        DefaultParameterSetName = 'ProjectID'
+    )]
     param(
         [Parameter(
             Mandatory,
-            ValueFromPipeline = $true
+            ParameterSetName = 'ResourceGroupName'
         )]
         [ValidatePattern('^[a-zA-Z0-9_-]+$')]
         [string]$ResourceGroupName,
+
+        [Parameter(
+            Mandatory,
+            ParameterSetName = 'ProjectID',
+            ValueFromPipeline = $true
+        )]
+        [ValidatePattern('^\d+$')]
+        [string]$ProjectID,
+
+        # No ParameterSetName = available in both parameter sets
         [hashtable]$Tags = @{
             Department  = "IT"
             Environment = "Test"
@@ -51,9 +73,18 @@ function New-TestResourceGroup {
         Write-Debug "DebugPreference is set to $DebugPreference"
     }
     process {
+        # Work out the final name based on which parameter set was used
+        if ($PSCmdlet.ParameterSetName -eq 'ProjectID') {
+            $rgName = "RG-$ProjectID"
+        }
+        else {
+            $rgName = $ResourceGroupName
+        }
+        Write-Verbose "Parameter set '$($PSCmdlet.ParameterSetName)' used. Resource group name: '$rgName'."
+
         # Build the result object, defaulting to a failed state
         $result = [PSCustomObject]@{
-            ResourceGroupName = $ResourceGroupName
+            ResourceGroupName = $rgName
             Location          = 'centralus'
             Status            = 'Not Created'
             Tags              = $Tags
@@ -62,16 +93,16 @@ function New-TestResourceGroup {
 
         # Only create the resource group if ShouldProcess approves
         if ($PSCmdlet.ShouldProcess(
-                "Resource Group '$ResourceGroupName'",
+                "Resource Group '$rgName'",
                 "Create"
             )) {
             try {
                 # Attempt to create the resource group
-                Write-Verbose "Attempting to create resource group '$ResourceGroupName' in 'centralus' location."
+                Write-Verbose "Attempting to create resource group '$rgName' in 'centralus' location."
                 Write-Debug "About to call New-AzResourceGroup with -ErrorAction Stop to ensure any errors are caught."
                 Write-Verbose "Applying tags: $($Tags.Keys -join ', ')"
                 New-AzResourceGroup `
-                    -Name $ResourceGroupName `
+                    -Name $rgName `
                     -Location centralus `
                     -Tag $Tags `
                     -ErrorAction Stop | Out-Null
@@ -80,7 +111,7 @@ function New-TestResourceGroup {
             }
             catch {
                 # Handle any errors that occur during resource group creation
-                Write-Warning "Failed to create resource group '$ResourceGroupName'. Error: $($_.Exception.Message)"
+                Write-Warning "Failed to create resource group '$rgName'. Error: $($_.Exception.Message)"
             }
         }
 
