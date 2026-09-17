@@ -82,3 +82,13 @@ I also fixed the Task 5 issue where the transcript start and stop messages were 
 I tested three different situations. The first test processed five existing resource groups and showed 5 skipped, 0 created, and 0 errors, and `$results.Count` returned 5, which confirmed the transcript fix worked. The second test used one existing group and one new group, and the summary correctly showed 1 skipped and 1 created. The third test used an invalid tag name, and the function caught the Azure error and showed 1 error with nothing created or skipped.
 
 The main thing I learned is that every request should end in only one result: created, skipped, or failed. Because each request only increases one of those counters, the created, skipped, and error totals should always add back up to the total requests processed.
+
+## Task 7: Prepare for Module Development
+
+I updated both README files so they match the current LM4 version of the function instead of describing how it worked in earlier modules. The function README now explains the parameter sets, bulk input, verbose messages, skip behavior, output, run summary, and testing, while the main repository README shows how the project has changed through each module. Good documentation becomes more important when a function is moved into a module because other admins need to understand how to use it without reading through all of the code.
+
+I also kept the comment-based help updated as changes were made, so `Get-Help New-TestResourceGroup` gives information that matches how the function actually works. This helps prevent someone from following old examples or using parameters that have changed.
+
+The Pester tests also needed to be rewritten because the old test still pointed to the `LM1` folder and had been broken since the repository was reorganized in LM3. The new tests dot-source the current function and mock the Azure commands so they can test the function without creating real Azure resources. All 10 tests passed.
+
+One thing I learned was that the function has to be dot-sourced inside `BeforeAll` so it is loaded before the tests run. I also learned to check which tab I am editing before pasting changes because it is easy to overwrite the wrong file. Git makes it possible to recover with `git restore`, but only back to the last commit, which is another reason to commit after each task.
