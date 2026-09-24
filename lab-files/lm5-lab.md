@@ -172,3 +172,50 @@ Get-Command -Module NWTC.ResourceGroups
 - Same ShouldProcess lesson as the LM3 transcript: `-WhatIf` flows into every command the function calls, so the helper needs `-WhatIf:$false` or `-WhatIf` would also skip logging.
 - One log file per run, named with the start time (`New-TestResourceGroup-Log-yyyyMMdd-HHmmss.txt`). `.gitignore` keeps them out of the repo.
 - The 7-second gap between "Creating" and "already exists" in the RG-1001 log is the `Get-AzResourceGroup` call to Azure.
+
+---
+
+## Task 6 – Test the Module
+
+**Setup**
+- Cleared old logs (`Remove-Item .\Logs\*.txt`), removed and re-imported the module through the manifest so every result came from a clean load.
+
+**Test results**
+
+| Check | Command | Result |
+|---|---|---|
+| (a) ResourceGroupName | `New-TestResourceGroup -ResourceGroupName Dev2` | Created; log shows `parameter set: ResourceGroupName` |
+| (a) Skip check by name | same command, run again | Skipped with `[WARN]` |
+| (b) ProjectID | `New-TestResourceGroup -ProjectID 1013` | `RG-1013` Created |
+| (c) Pipeline | `"1014" \| New-TestResourceGroup` | `RG-1014` Created |
+| (d) Multiple values (pipeline) | `"1015", "1016", "1001" \| New-TestResourceGroup` | 2 Created, 1 Skipped – one log file for all three |
+| (d) Bulk file | `Get-Content ..\lab-files\ResourceGroups.txt \| New-TestResourceGroup -WhatIf` | 1006–1010 all Skipped (already exist), one log file |
+| (d) Multiple values (comma list) | `New-TestResourceGroup -ProjectID 1017, 1018` | **Failed at first** – see fix below |
+| Bad input | `New-TestResourceGroup -ProjectID abc` | Blocked by `ValidatePattern` |
+| (e) Log content | read every log file | Correct `[INFO]`/`[WARN]` lines; counts match the on-screen summaries |
+| (f) Log location | `Test-Path .\Public\Logs` | `False` – logs in `NWTC.ResourceGroups\Logs\` |
+| (f) Log location from another folder | ran from repo root, checked `.\Logs` | Log still landed in the module's `Logs` folder; no `Logs` created in repo root |
+| Azure check | `Get-AzResourceGroup` filtered to new groups | All in `centralus` with `Department=IT`, `Environment=Test` tags |
+
+**Problem found and fixed**
+- `New-TestResourceGroup -ProjectID 1017, 1018` failed: `Cannot convert value to type System.String`. `$ProjectID` was `[string]`, which only holds one value, so multiple values only worked through the pipeline.
+- Fix: changed `ProjectID` and `ResourceGroupName` to `[string[]]` and added a `foreach` loop inside `process` so each value is handled one at a time. `$totalCount++` moved inside the loop so a comma list counts each value.
+
+**Retest after the fix**
+
+| Command | Result |
+|---|---|
+| `New-TestResourceGroup -ProjectID 1017, 1018` | Both Created, Total 2 |
+| `"1019" \| New-TestResourceGroup` | Created – pipeline still works |
+| `New-TestResourceGroup -ResourceGroupName Dev3, Dev2` | Dev3 Created, Dev2 Skipped, one log file |
+| `New-TestResourceGroup -ProjectID 1020, abc` | `ValidatePattern` error on `abc`; no "Starting" line; `RG-1020` was not created |
+
+**Result**
+- Commit `c9a5165` "Accept arrays for ProjectID and ResourceGroupName".
+
+**Notes**
+- Testing found a real gap. The function "accepted multiple values" through the pipeline, but not the way admins expect from built-in commands (`Stop-Service -Name a, b`).
+- Piped values arrive one at a time as a one-item array, so the new loop runs once per piped value – the pipeline behavior didn't change.
+- `ValidatePattern` checks every item in the array before `begin` runs. One bad value rejects the whole command, so nothing is half-created.
+- The log file location is anchored to the module, not the current folder – same kind of bug the LM3 transcript had, now fixed properly.
+- Azure state after testing: `Dev2`, `Dev3`, and `RG-1013` through `RG-1019` created in `centralus`.
