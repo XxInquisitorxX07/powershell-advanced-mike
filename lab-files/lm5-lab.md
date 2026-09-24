@@ -101,3 +101,31 @@ Get-Module NWTC.ResourceGroups
 - `FunctionsToExport = '*'` is the default in the manifest. Left it for now – Task 4 controls exports with `Export-ModuleMember`.
 - The `.psm1` holds the code; the `.psd1` holds the metadata (version, author, description, what to load).
 - Lab doc typos: "NWTC.ReourceGroups" in Task 3, and the description is worded two ways ("resource groups creation" vs. "resource group creation"). Used the example's wording.
+
+---
+
+## Task 4 – Export Module Members
+
+**What I did**
+- Added `Export-ModuleMember` to the end of `NWTC.ResourceGroups.psm1` so only functions from the `Public` folder are exported.
+
+**Key code**
+```powershell
+Export-ModuleMember -Function $publicFunctions.BaseName
+```
+
+**Verification**
+```powershell
+Import-Module .\NWTC.ResourceGroups.psd1 -Force
+Get-Command -Module NWTC.ResourceGroups
+```
+- Output listed only `New-TestResourceGroup`, version `1.0.0`, source `NWTC.ResourceGroups`.
+
+**Result**
+- Commit `ac61208` "Export public functions with Export-ModuleMember".
+
+**Notes**
+- Without `Export-ModuleMember`, a `.psm1` exports every function it loads. Once it's used, only the listed functions are exported – this is what will keep the Task 5 private helper hidden.
+- `$publicFunctions.BaseName` is the file name without `.ps1`. It only works because each file is named after the function inside it – one function per file.
+- The manifest's `FunctionsToExport = '*'` doesn't override this. The `.psm1` decides what gets exported, and the manifest can only narrow that list further.
+- Had to re-import with `-Force` for the change to show up.
