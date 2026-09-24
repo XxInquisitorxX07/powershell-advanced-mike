@@ -129,3 +129,46 @@ Get-Command -Module NWTC.ResourceGroups
 - `$publicFunctions.BaseName` is the file name without `.ps1`. It only works because each file is named after the function inside it – one function per file.
 - The manifest's `FunctionsToExport = '*'` doesn't override this. The `.psm1` decides what gets exported, and the manifest can only narrow that list further.
 - Had to re-import with `-Force` for the change to show up.
+
+---
+
+## Task 5 – Create a Private Helper Function
+
+**What I did**
+- Created `Private\Write-ModuleLog.ps1` – a helper that writes timestamped lines to a log file.
+- Updated `NWTC.ResourceGroups.psm1` to load the `Private` folder too, without exporting it.
+- Replaced `Start-Transcript`/`Stop-Transcript` in `New-TestResourceGroup` with `Write-ModuleLog` calls.
+- Removed `Private\.gitkeep` with `git rm` now that the folder has a real file.
+
+**Write-ModuleLog parameters**
+- `-Message` (mandatory) – text to log.
+- `-LogFile` (mandatory) – full path to the log file.
+- `-Level` – `INFO`, `WARN`, or `ERROR` (`ValidateSet`), defaults to `INFO`.
+- Extras: creates the log folder if it's missing; uses `-WhatIf:$false -Confirm:$false` on `New-Item` and `Add-Content` so logging still happens during `-WhatIf`.
+
+**Log format**
+```
+2026-09-24 09:00:17 [INFO] Starting the creation of Resource Group... (parameter set: ProjectID)
+2026-09-24 09:00:17 [INFO] Creating Resource Group based on ProjectID: 1001
+2026-09-24 09:00:24 [WARN] Resource Group 'RG-1001' already exists. Skipping.
+2026-09-24 09:00:24 [INFO] Finished processing the creation of Resource Group. Total: 1, Created: 0, Skipped: 1, Errors: 0
+```
+
+**Verification**
+- Tested `Write-ModuleLog` alone by dot-sourcing it: INFO and WARN lines written correctly; `-Level DEBUG` was rejected by `ValidateSet`. Removed the test copy with `Remove-Item Function:\Write-ModuleLog` so it couldn't affect the module test.
+- After re-import, `Get-Command -Module NWTC.ResourceGroups` still shows only `New-TestResourceGroup`.
+- `Get-Command Write-ModuleLog` returns "not recognized" – the helper is loaded inside the module but hidden from users.
+- `New-TestResourceGroup -ProjectID 1001` logged the `[WARN]` skip (RG-1001 already exists).
+- `New-TestResourceGroup -ProjectID 1013 -WhatIf` logged "not performed (WhatIf or Confirm declined)" – logging works during `-WhatIf`.
+- Logs landed in `NWTC.ResourceGroups\Logs\`; `Test-Path .\Public\Logs` = `False`.
+
+**Result**
+- Commit `171dc8e` "Add private Write-ModuleLog helper function".
+- Commit `066d28d` "Load private functions and replace transcript with Write-ModuleLog".
+
+**Notes**
+- Log path problem: inside a function, `$PSScriptRoot` is the folder of the file the function is defined in – for `New-TestResourceGroup` that's `Public`, not the module root. Without a fix, logs would go to `Public\Logs`. Fixed with `Split-Path -Path $PSScriptRoot -Parent` to go up one level.
+- Private functions are loaded (dot-sourced) so public functions can call them, but `Export-ModuleMember` only lists `$publicFunctions.BaseName`, so they stay hidden.
+- Same ShouldProcess lesson as the LM3 transcript: `-WhatIf` flows into every command the function calls, so the helper needs `-WhatIf:$false` or `-WhatIf` would also skip logging.
+- One log file per run, named with the start time (`New-TestResourceGroup-Log-yyyyMMdd-HHmmss.txt`). `.gitignore` keeps them out of the repo.
+- The 7-second gap between "Creating" and "already exists" in the RG-1001 log is the `Get-AzResourceGroup` call to Azure.
