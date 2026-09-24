@@ -9,6 +9,7 @@ function New-TestResourceGroup {
         Supports bulk creation through pipeline input. Resource groups that already exist
         are skipped. A summary of total, created, skipped, and failed requests is displayed
         when the run finishes. Use -Verbose to see step-by-step progress messages.
+        Each run writes a timestamped log file to the module's Logs folder.
     .PARAMETER ResourceGroupName
         The full name of the Resource Group to create.
         Used in the 'ResourceGroupName' parameter set.
@@ -35,7 +36,7 @@ function New-TestResourceGroup {
         Creates 'RG-1001' with custom tags.
     .EXAMPLE
         PS C:\> "1001" | New-TestResourceGroup -WhatIf
-        Shows what would happen without creating the Resource Group.
+        Shows what would happen without creating the Resource Group. The run is still logged.
     .OUTPUTS
         PSCustomObject with ResourceGroupName, Location, Status, Tags, and Timestamp properties.
         Status is one of: Created, Skipped, Failed.
@@ -46,6 +47,7 @@ function New-TestResourceGroup {
         Date: 2026 Sep 17 - Added Begin/Process/End initialization, startup message, and run summary
         Date: 2026 Sep 17 - Added verbose messages for start, validation, creation attempt, and completion
         Date: 2026 Sep 17 - Added execution counters, skip check for existing groups, and removed transcript text from output
+        Date: 2026 Sep 24 - Moved into NWTC.ResourceGroups module; replaced Start/Stop-Transcript with private Write-ModuleLog helper
         Course: PowerShell Advanced
     #>
     [CmdletBinding(
@@ -75,12 +77,12 @@ function New-TestResourceGroup {
         }
     )
     begin {
-        # Start logging script activity to a log file
-        # -WhatIf:$false and -Confirm:$false opt logging out of ShouldProcess so that
-        # only the resource group creation is governed by -WhatIf and -Confirm
-        # | Out-Null keeps the "Transcript started" text out of the function's output
-        $logPath = Join-Path $PSScriptRoot "..\output\create-resourcegroup.log.txt"
-        Start-Transcript -Path $logPath -Append -WhatIf:$false -Confirm:$false | Out-Null
+        # Build the log file path.
+        # $PSScriptRoot here is the Public folder (where this file lives), NOT the module root,
+        # so go up one level to reach the module's Logs folder.
+        # One log file per run, named with the run's start time.
+        $moduleRoot = Split-Path -Path $PSScriptRoot -Parent
+        $logFile    = Join-Path $moduleRoot "Logs\New-TestResourceGroup-Log-$(Get-Date -Format 'yyyyMMdd-HHmmss').txt"
 
         # Initialize variables once, before any pipeline objects arrive
         $startTime    = Get-Date
@@ -92,7 +94,8 @@ function New-TestResourceGroup {
 
         # Startup message
         Write-Host "Starting New-TestResourceGroup at $($startTime.ToString('g')) (location: $location)"
-        Write-Verbose "[START] Function started. Parameter set: '$($PSCmdlet.ParameterSetName)'. Logging to '$logPath'."
+        Write-ModuleLog -Message "Starting the creation of Resource Group... (parameter set: $($PSCmdlet.ParameterSetName))" -Level INFO -LogFile $logFile
+        Write-Verbose "[START] Function started. Parameter set: '$($PSCmdlet.ParameterSetName)'. Logging to '$logFile'."
         Write-Debug "DebugPreference is set to $DebugPreference"
     }
     process {
@@ -103,10 +106,12 @@ function New-TestResourceGroup {
         if ($PSCmdlet.ParameterSetName -eq 'ProjectID') {
             $rgName = "RG-$ProjectID"
             # ValidatePattern already ran before this block; reaching here means input passed
+            Write-ModuleLog -Message "Creating Resource Group based on ProjectID: $ProjectID" -Level INFO -LogFile $logFile
             Write-Verbose "[VALIDATION] ProjectID '$ProjectID' passed validation. Generated name: '$rgName'."
         }
         else {
             $rgName = $ResourceGroupName
+            Write-ModuleLog -Message "Creating Resource Group based on ResourceGroupName: $rgName" -Level INFO -LogFile $logFile
             Write-Verbose "[VALIDATION] ResourceGroupName '$rgName' passed validation."
         }
 
@@ -125,6 +130,7 @@ function New-TestResourceGroup {
         if ($existing) {
             $result.Status = 'Skipped'
             $skippedCount++
+            Write-ModuleLog -Message "Resource Group '$rgName' already exists. Skipping." -Level WARN -LogFile $logFile
             Write-Warning "Resource group '$rgName' already exists. Skipping."
         }
         # Only create the resource group if ShouldProcess approves
@@ -134,6 +140,7 @@ function New-TestResourceGroup {
             )) {
             try {
                 # Attempt to create the resource group
+                Write-ModuleLog -Message "Creating Resource Group '$rgName' in '$location'" -Level INFO -LogFile $logFile
                 Write-Verbose "[ATTEMPT] Creating resource group '$rgName' in '$location' with tags: $($Tags.Keys -join ', ')."
                 Write-Debug "About to call New-AzResourceGroup with -ErrorAction Stop to ensure any errors are caught."
                 New-AzResourceGroup `
@@ -143,12 +150,14 @@ function New-TestResourceGroup {
                     -ErrorAction Stop | Out-Null
                 $result.Status = 'Created'
                 $createdCount++
+                Write-ModuleLog -Message "Resource Group '$rgName' created successfully." -Level INFO -LogFile $logFile
                 Write-Verbose "[SUCCESS] Resource group '$rgName' created successfully."
             }
             catch {
                 # Handle any errors that occur during resource group creation
                 $result.Status = 'Failed'
                 $errorCount++
+                Write-ModuleLog -Message "Failed to create Resource Group '$rgName'. Error: $($_.Exception.Message)" -Level ERROR -LogFile $logFile
                 Write-Warning "Failed to create resource group '$rgName'. Error: $($_.Exception.Message)"
             }
         }
@@ -156,6 +165,7 @@ function New-TestResourceGroup {
             # -WhatIf was used or Confirm was declined
             $result.Status = 'Skipped'
             $skippedCount++
+            Write-ModuleLog -Message "Creation of '$rgName' was not performed (WhatIf or Confirm declined)." -Level INFO -LogFile $logFile
             Write-Verbose "[SKIPPED] Creation of '$rgName' was not performed (WhatIf or Confirm declined)."
         }
 
@@ -173,8 +183,8 @@ function New-TestResourceGroup {
         Write-Host "Errors                   : $errorCount"
         Write-Host "Elapsed time             : $([math]::Round($duration.TotalSeconds, 1)) seconds"
 
-        Write-Verbose "[COMPLETE] Processed $totalCount request(s). Stopping transcript."
+        Write-ModuleLog -Message "Finished processing the creation of Resource Group. Total: $totalCount, Created: $createdCount, Skipped: $skippedCount, Errors: $errorCount" -Level INFO -LogFile $logFile
+        Write-Verbose "[COMPLETE] Processed $totalCount request(s). Log saved to '$logFile'."
         Write-Debug "Reached the end of the function execution block."
-        Stop-Transcript -WhatIf:$false -Confirm:$false | Out-Null
     }
 }
