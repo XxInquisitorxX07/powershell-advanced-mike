@@ -219,3 +219,50 @@ Get-Command -Module NWTC.ResourceGroups
 - `ValidatePattern` checks every item in the array before `begin` runs. One bad value rejects the whole command, so nothing is half-created.
 - The log file location is anchored to the module, not the current folder – same kind of bug the LM3 transcript had, now fixed properly.
 - Azure state after testing: `Dev2`, `Dev3`, and `RG-1013` through `RG-1019` created in `centralus`.
+
+---
+
+## Task 7 – Prepare for Distribution
+
+**What I did**
+- Updated the manifest with distribution metadata using `Update-ModuleManifest`.
+- Created the module README at `NWTC.ResourceGroups\Docs\README.md` (purpose, features, requirements, installation, usage, logging, structure, version information, known limitations). Removed `Docs\.gitkeep` with `git rm`.
+- Updated the function README (`create-resourcegroup\README.md`) for the module version: loading with `Import-Module`, array parameters, `Write-ModuleLog` logging, and a note that the `.ps1` in that folder is the LM4 standalone copy kept for its Pester tests.
+- Updated the repo README: module overview, new repository structure, LM5 row in the module history table, LM5 lessons learned.
+- Comment header was already updated during Tasks 5 and 6 (description, parameter help for arrays, comma-list example, new `.NOTES` lines). Confirmed with `Get-Help`.
+
+**Manifest update**
+```powershell
+Update-ModuleManifest -Path .\NWTC.ResourceGroups.psd1 `
+    -FunctionsToExport 'New-TestResourceGroup' `
+    -CompanyName 'NWTC' `
+    -PowerShellVersion '7.0' `
+    -Tags 'Azure', 'ResourceGroup', 'NWTC' `
+    -ProjectUri 'https://github.com/XxInquisitorxX07/powershell-advanced-mike' `
+    -ReleaseNotes '1.0.0 - Initial release. ...'
+```
+
+**Verification**
+```powershell
+Test-ModuleManifest .\NWTC.ResourceGroups.psd1
+Remove-Module NWTC.ResourceGroups -ErrorAction SilentlyContinue
+Import-Module .\NWTC.ResourceGroups.psd1 -Force
+Get-Module NWTC.ResourceGroups | Select-Object Name, Version
+Get-Command -Module NWTC.ResourceGroups
+Get-Help New-TestResourceGroup -Examples
+```
+- `Test-ModuleManifest` now lists `New-TestResourceGroup` under `ExportedCommands` (blank in Task 3).
+- Version `1.0.0`; only `New-TestResourceGroup` exported.
+- `Get-Help -Examples` shows all 7 examples, including `-ProjectID 1017, 1018`.
+- Previewed all three READMEs with `Ctrl+Shift+V` to check tables and code blocks render.
+
+**Result**
+- Commit `0bfc172` "Prepare module for distribution: manifest metadata and READMEs".
+
+**Notes**
+- Used `Update-ModuleManifest` instead of `New-ModuleManifest` so the `GUID` stayed the same. Regenerating would give the module a new identity.
+- `FunctionsToExport` changed from `'*'` to `'New-TestResourceGroup'`. The manifest's own comment says to avoid wildcards. With the name listed, PowerShell knows what the module exports without loading it – which is why `Test-ModuleManifest` can show it now. Trade-off: every new public command has to be added to the manifest too (documented in the module README under "Adding a new command").
+- `PowerShellVersion = '7.0'` stops the module from loading on Windows PowerShell 5.1, where it was never tested.
+- Kept version `1.0.0`. The module hasn't been released before, so everything built in LM5 is the initial release.
+- The installation instructions use a versioned folder (`Modules\NWTC.ResourceGroups\1.0.0`) so future versions can be installed side by side.
+- Known gap documented in the READMEs: the Pester tests still test the LM4 standalone copy. The module's `Tests` folder is empty – moving the tests there is future work.
