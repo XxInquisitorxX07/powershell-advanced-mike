@@ -2,21 +2,39 @@
 
 ## Project Purpose
 
-This repository contains coursework for the PowerShell Advanced class. The main project is `New-TestResourceGroup`, an advanced PowerShell function that creates Azure resource groups and is being prepared for inclusion in a PowerShell module.
+This repository contains coursework for the PowerShell Advanced class. The main project is `New-TestResourceGroup`, an advanced PowerShell function that creates Azure resource groups. In LM5 it was packaged into the **NWTC.ResourceGroups** PowerShell module.
 
 The function started as a basic script in LM1 and has been hardened and refactored in each module since.
 
 ## Repository Structure
 
-- `create-resourcegroup/`: the function, its Pester tests, and its documentation.
+- `NWTC.ResourceGroups/`: the PowerShell module (current version of the function).
+  - `Public/`: exported functions (`New-TestResourceGroup`).
+  - `Private/`: internal helpers (`Write-ModuleLog`), loaded but not exported.
+  - `Docs/`: module README with installation and usage instructions.
+  - `Logs/`: per-run log files (not tracked in Git).
+  - `Tests/`: reserved for module Pester tests.
+- `create-resourcegroup/`: the standalone LM4 version of the function, its Pester tests, and the function README.
 - `lab-files/`: lab writeups for each learning module, plus `ResourceGroups.txt` for bulk testing.
-- `output/`: transcript logs written by the function.
+- `output/`: transcript logs from the standalone LM4 version.
+
+## The Module
+
+`NWTC.ResourceGroups` (version 1.0.0) packages `New-TestResourceGroup` with a manifest, a loader that separates public and private functions, and its own logging.
+
+```powershell
+Connect-AzAccount -TenantId "mh4372.onmicrosoft.com"
+Import-Module .\NWTC.ResourceGroups\NWTC.ResourceGroups.psd1
+Get-Command -Module NWTC.ResourceGroups
+```
+
+Installation, usage, and version details are in `NWTC.ResourceGroups/Docs/README.md`.
 
 ## The Function
 
-`New-TestResourceGroup` creates Azure resource groups in the centralus region. A resource group can be named directly with `-ResourceGroupName`, or generated from a project ID with `-ProjectID` (for example, `1001` becomes `RG-1001`). Project IDs can be piped in or read from a file for bulk creation.
+`New-TestResourceGroup` creates Azure resource groups in the centralus region. A resource group can be named directly with `-ResourceGroupName`, or generated from a project ID with `-ProjectID` (for example, `1001` becomes `RG-1001`). Both parameters accept comma-separated lists, and project IDs can also be piped in or read from a file for bulk creation.
 
-Each request returns a `PSCustomObject` with a status of `Created`, `Skipped`, or `Failed`. Existing resource groups are skipped instead of being updated. Errors are caught so one failure does not stop the run. A summary at the end shows the total, created, skipped, and error counts. The function also supports `-WhatIf`, `-Confirm`, and labeled `-Verbose` messages.
+Each request returns a `PSCustomObject` with a status of `Created`, `Skipped`, or `Failed`. Existing resource groups are skipped instead of being updated. Errors are caught so one failure does not stop the run. A summary at the end shows the total, created, skipped, and error counts. Every run is logged to a timestamped file. The function also supports `-WhatIf`, `-Confirm`, and labeled `-Verbose` messages.
 
 Full usage details are in `create-resourcegroup/README.md`.
 
@@ -26,7 +44,7 @@ Full usage details are in `create-resourcegroup/README.md`.
 Invoke-Pester .\create-resourcegroup\create-resourcegroup.tests.ps1 -Output Detailed
 ```
 
-The Azure cmdlets are mocked, so no real resources are created.
+The Azure cmdlets are mocked, so no real resources are created. These tests cover the standalone LM4 version; the module version was tested manually in LM5.
 
 ## Module History
 
@@ -36,6 +54,7 @@ The Azure cmdlets are mocked, so no real resources are created.
 | LM2 | Verbose and debug output, Pester testing |
 | LM3 | Advanced function with validation, tags, pipeline support, structured output, `-WhatIf`, and transcript logging |
 | LM4 | Parameter sets, bulk processing, labeled verbose messages, skip check, execution counters, run summary, and rewritten Pester tests |
+| LM5 | Packaged as the NWTC.ResourceGroups module: manifest (v1.0.0), Public/Private structure, controlled exports, private `Write-ModuleLog` helper replacing the transcript, array input for both parameters, and module documentation |
 
 ## Lessons Learned
 
@@ -60,3 +79,15 @@ The Azure cmdlets are mocked, so no real resources are created.
 **LM4: Skipping existing resources.** Checking with `Get-AzResourceGroup` before creating keeps a bulk run from stalling on an "update existing group?" prompt, and it also fixes the unattended-testing problem from LM2.
 
 **LM4: Tests need maintenance.** The old Pester test still pointed at the `LM1` folder after the LM3 reorganization, so it had been broken without anyone noticing. Mocking the Azure cmdlets makes the tests fast and repeatable, with no real resources created.
+
+**LM5: `$PSScriptRoot` depends on where the code lives.** Inside a function, `$PSScriptRoot` is the folder of the file the function is defined in. After moving the function into `Public`, the log path pointed to the wrong folder until I went up one level with `Split-Path -Parent`.
+
+**LM5: The manifest needs `RootModule`.** A manifest without `RootModule` imports with a version number but no commands. The `.psm1` holds the code; the `.psd1` only describes it and points to it.
+
+**LM5: Exports are opt-in once you start controlling them.** A `.psm1` exports every function by default. `Export-ModuleMember` limits exports to the public functions, which is what keeps private helpers like `Write-ModuleLog` hidden.
+
+**LM5: Leftover copies hide problems.** A dot-sourced copy of a function stays in the session and can make a module look like it works. Removing the module and the test function before re-testing made sure results came from the module itself.
+
+**LM5: Test the packaged version.** Testing the module found that `-ProjectID 1017, 1018` failed because the parameter was a single `[string]`. Changing it to `[string[]]` with a loop in `process` fixed it without changing pipeline behavior.
+
+**LM5: Git doesn't track empty folders.** The new module folders needed `.gitkeep` placeholder files to show up on GitHub.

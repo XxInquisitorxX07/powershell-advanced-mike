@@ -24,7 +24,7 @@ GUID = '8903b80e-eef2-4595-bf45-ce7cb4763e32'
 Author = 'Mike Hagel'
 
 # Company or vendor of this module
-CompanyName = 'Unknown'
+CompanyName = 'NWTC'
 
 # Copyright statement for this module
 Copyright = '(c) Mike Hagel. All rights reserved.'
@@ -33,7 +33,7 @@ Copyright = '(c) Mike Hagel. All rights reserved.'
 Description = 'Test resource group creation'
 
 # Minimum version of the PowerShell engine required by this module
-# PowerShellVersion = ''
+PowerShellVersion = '7.0'
 
 # Name of the PowerShell host required by this module
 # PowerShellHostName = ''
@@ -69,7 +69,7 @@ Description = 'Test resource group creation'
 # NestedModules = @()
 
 # Functions to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no functions to export.
-FunctionsToExport = '*'
+FunctionsToExport = 'New-TestResourceGroup'
 
 # Cmdlets to export from this module, for best performance, do not use wildcards and do not delete the entry, use an empty array if there are no cmdlets to export.
 CmdletsToExport = '*'
@@ -95,19 +95,19 @@ PrivateData = @{
     PSData = @{
 
         # Tags applied to this module. These help with module discovery in online galleries.
-        # Tags = @()
+        Tags = 'Azure','ResourceGroup','NWTC'
 
         # A URL to the license for this module.
         # LicenseUri = ''
 
         # A URL to the main website for this project.
-        # ProjectUri = ''
+        ProjectUri = 'https://github.com/XxInquisitorxX07/powershell-advanced-mike'
 
         # A URL to an icon representing this module.
         # IconUri = ''
 
         # ReleaseNotes of this module
-        # ReleaseNotes = ''
+        ReleaseNotes = '1.0.0 - Initial release. New-TestResourceGroup with ProjectID and ResourceGroupName parameter sets, array and pipeline input, skip check for existing groups, WhatIf support, and per-run logging through the private Write-ModuleLog helper.'
 
         # Prerelease string of this module
         # Prerelease = ''
@@ -120,7 +120,7 @@ PrivateData = @{
 
     } # End of PSData hashtable
 
-} # End of PrivateData hashtable
+ } # End of PrivateData hashtable
 
 # HelpInfo URI of this module
 # HelpInfoURI = ''
