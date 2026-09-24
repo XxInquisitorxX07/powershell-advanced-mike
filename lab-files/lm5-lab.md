@@ -87,16 +87,17 @@ Remove-Module NWTC.ResourceGroups -ErrorAction SilentlyContinue
 Import-Module .\NWTC.ResourceGroups.psd1 -Force
 Get-Module NWTC.ResourceGroups
 ```
-- `Test-ModuleManifest` passed with no errors.
-- `Get-Module` now shows version `1.0.0` (was `0.0` in Task 2) and still exports `New-TestResourceGroup`.
+- `Test-ModuleManifest` passed with no errors, version `1.0.0`. `ExportedCommands` was blank – that's expected. It only reads the `.psd1` and never runs the `.psm1`, and `FunctionsToExport = '*'` doesn't name any commands for it to list.
+- `Get-Module` after a real import shows version `1.0.0` (was `0.0` in Task 2) and exports `New-TestResourceGroup`.
 
 **Result**
-- Commit `<hash>` "Add module manifest NWTC.ResourceGroups.psd1 (v1.0.0)".
+- Commit `d327d02` "Add module manifest NWTC.ResourceGroups.psd1 (v1.0.0)".
 
 **Notes**
 - The lab example leaves out `-RootModule`. Without it, the manifest has no code file to load – importing the `.psd1` gives version `1.0.0` but zero commands. Added it so the module can be imported through the manifest (needed for the Task 7 install instructions).
 - `Remove-Module` before the import clears the Task 2 copy so the result proves the manifest works, not a leftover.
 - `GUID` was generated automatically. It uniquely identifies this module even if another module has the same name.
+- Ran `New-ModuleManifest` twice by accident. The second run silently overwrote the first, including a new `GUID`. Harmless before the first commit, but on a published module regenerating the manifest would change its identity.
 - `FunctionsToExport = '*'` is the default in the manifest. Left it for now – Task 4 controls exports with `Export-ModuleMember`.
 - The `.psm1` holds the code; the `.psd1` holds the metadata (version, author, description, what to load).
 - Lab doc typos: "NWTC.ReourceGroups" in Task 3, and the description is worded two ways ("resource groups creation" vs. "resource group creation"). Used the example's wording.
