@@ -66,3 +66,37 @@ Get-Command New-TestResourceGroup | Select-Object Name, Source
 - `Import-Module -Force` replaces the old edit → save → dot-source routine. Without `-Force`, PowerShell keeps the old version loaded.
 - Version shows `0.0` because there's no manifest yet (Task 3).
 - The function was exported even without `Export-ModuleMember` – a `.psm1` exports every function by default (Task 4 will control this).
+
+---
+
+## Task 3 – Create a Module Manifest
+
+**What I did**
+- Generated `NWTC.ResourceGroups.psd1` with `New-ModuleManifest`.
+- Validated the manifest and imported the module through it.
+
+**Command**
+```powershell
+New-ModuleManifest -Path .\NWTC.ResourceGroups.psd1 -RootModule 'NWTC.ResourceGroups.psm1' -Author 'Mike Hagel' -ModuleVersion '1.0.0' -Description 'Test resource group creation'
+```
+
+**Verification**
+```powershell
+Test-ModuleManifest .\NWTC.ResourceGroups.psd1
+Remove-Module NWTC.ResourceGroups -ErrorAction SilentlyContinue
+Import-Module .\NWTC.ResourceGroups.psd1 -Force
+Get-Module NWTC.ResourceGroups
+```
+- `Test-ModuleManifest` passed with no errors.
+- `Get-Module` now shows version `1.0.0` (was `0.0` in Task 2) and still exports `New-TestResourceGroup`.
+
+**Result**
+- Commit `<hash>` "Add module manifest NWTC.ResourceGroups.psd1 (v1.0.0)".
+
+**Notes**
+- The lab example leaves out `-RootModule`. Without it, the manifest has no code file to load – importing the `.psd1` gives version `1.0.0` but zero commands. Added it so the module can be imported through the manifest (needed for the Task 7 install instructions).
+- `Remove-Module` before the import clears the Task 2 copy so the result proves the manifest works, not a leftover.
+- `GUID` was generated automatically. It uniquely identifies this module even if another module has the same name.
+- `FunctionsToExport = '*'` is the default in the manifest. Left it for now – Task 4 controls exports with `Export-ModuleMember`.
+- The `.psm1` holds the code; the `.psd1` holds the metadata (version, author, description, what to load).
+- Lab doc typos: "NWTC.ReourceGroups" in Task 3, and the description is worded two ways ("resource groups creation" vs. "resource group creation"). Used the example's wording.
