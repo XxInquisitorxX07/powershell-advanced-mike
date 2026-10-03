@@ -113,3 +113,22 @@ LM6-Test          centralus Owner=Mike; Project=LM6
 ```
 
 The regression check matters as much as testing the new feature. A minor release promises that existing functionality is unchanged, and running `New-TestResourceGroup` after the upgrade proves that promise was kept.
+
+
+## Task 7: Publish and Distribute
+
+**Documentation updated:**
+- **Function README:** created `NWTC.ResourceGroups/Public/README.md`, a reference for both public functions (syntax, parameters, examples, output). The syntax was taken from `Get-Command -Syntax` so it matches the code.
+- **Module README:** `Docs/README.md` updated to 1.1.0, with a What's New section, Get-ResourceGroupSummary features and usage, a Testing section, an upgrade path, the new folder structure, a 1.1.0 version row, links to the changelog and release notes, and the install path corrected from `1.0.0` to `1.1.0`.
+- **Repo README:** updated the structure and module sections, added both test commands, an LM6 history row, and LM6 lessons learned.
+
+**Packaging:**
+The lab command zips `NWTC.ResourceGroups` into `NWTC.ResourceGroups\Releases`, a folder inside what is being zipped. To avoid zipping the release folder into itself and shipping log files, I staged a clean copy in `$env:TEMP` (without `Releases` and the `Logs\*.txt` files) and ran `Compress-Archive` on that:
+
+    Compress-Archive -Path $stage -DestinationPath .\NWTC.ResourceGroups\Releases\NWTC.ResourceGroups1.1.0.zip -Force
+
+**Package verification:**
+Extracted the zip to a temp folder and imported it from there, the way an administrator receiving it would:
+- `Get-Module`: version 1.1.0, path in `...\Temp\...\ziptest\NWTC.ResourceGroups`, which proves the zip copy was loaded, not the repo copy.
+- `Get-Command`: both functions exported.
+- Contents: manifest, loader, both public functions, the private helper, tests, and all docs. No log files and no Releases folder.

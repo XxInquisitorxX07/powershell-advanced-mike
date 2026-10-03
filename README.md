@@ -2,25 +2,26 @@
 
 ## Project Purpose
 
-This repository contains coursework for the PowerShell Advanced class. The main project is `New-TestResourceGroup`, an advanced PowerShell function that creates Azure resource groups. In LM5 it was packaged into the **NWTC.ResourceGroups** PowerShell module.
+This repository contains coursework for the PowerShell Advanced class. The main project is `New-TestResourceGroup`, an advanced PowerShell function that creates Azure resource groups. In LM5 it was packaged into the **NWTC.ResourceGroups** PowerShell module, and in LM6 the module went through its first full release cycle to version 1.1.0, adding a reporting command, tests, and release documentation.
 
 The function started as a basic script in LM1 and has been hardened and refactored in each module since.
 
 ## Repository Structure
 
 - `NWTC.ResourceGroups/`: the PowerShell module (current version of the function).
-  - `Public/`: exported functions (`New-TestResourceGroup`).
+  - `Public/`: exported functions (`New-TestResourceGroup`, `Get-ResourceGroupSummary`) and the function reference `README.md`.
   - `Private/`: internal helpers (`Write-ModuleLog`), loaded but not exported.
-  - `Docs/`: module README with installation and usage instructions.
-  - `Logs/`: per-run log files (not tracked in Git).
-  - `Tests/`: reserved for module Pester tests.
+  - `Docs/`: module README, `CHANGELOG.md`, and `RELEASENOTES.md`.
+  - `Tests/`: module Pester tests (`NWTC.ResourceGroups.Tests.ps1`).
+  - `Releases/`: packaged release zips (`NWTC.ResourceGroups1.1.0.zip`).
+  - `Logs/`: per-run log files.
 - `create-resourcegroup/`: the standalone LM4 version of the function, its Pester tests, and the function README.
 - `lab-files/`: lab writeups for each learning module, plus `ResourceGroups.txt` for bulk testing.
 - `output/`: transcript logs from the standalone LM4 version.
 
 ## The Module
 
-`NWTC.ResourceGroups` (version 1.0.0) packages `New-TestResourceGroup` with a manifest, a loader that separates public and private functions, and its own logging.
+`NWTC.ResourceGroups` (version **1.1.0**) packages two public functions with a manifest, a loader that separates public and private functions, its own logging, a Pester test suite, and versioned release documentation.
 
 ```powershell
 Connect-AzAccount -TenantId "mh4372.onmicrosoft.com"
@@ -28,23 +29,45 @@ Import-Module .\NWTC.ResourceGroups\NWTC.ResourceGroups.psd1
 Get-Command -Module NWTC.ResourceGroups
 ```
 
-Installation, usage, and version details are in `NWTC.ResourceGroups/Docs/README.md`.
+| Document | What it covers |
+| --- | --- |
+| `NWTC.ResourceGroups/Docs/README.md` | Installation, usage, logging, module structure |
+| `NWTC.ResourceGroups/Public/README.md` | Function reference: syntax, parameters, examples, output |
+| `NWTC.ResourceGroups/Docs/CHANGELOG.md` | Version history |
+| `NWTC.ResourceGroups/Docs/RELEASENOTES.md` | What's new in 1.1.0, upgrade steps, known issues |
 
-## The Function
+## The Functions
 
-`New-TestResourceGroup` creates Azure resource groups in the centralus region. A resource group can be named directly with `-ResourceGroupName`, or generated from a project ID with `-ProjectID` (for example, `1001` becomes `RG-1001`). Both parameters accept comma-separated lists, and project IDs can also be piped in or read from a file for bulk creation.
+**`New-TestResourceGroup`** creates Azure resource groups in the centralus region. A resource group can be named directly with `-ResourceGroupName`, or generated from a project ID with `-ProjectID` (for example, `1001` becomes `RG-1001`). Both parameters accept comma-separated lists, and project IDs can also be piped in or read from a file for bulk creation.
 
 Each request returns a `PSCustomObject` with a status of `Created`, `Skipped`, or `Failed`. Existing resource groups are skipped instead of being updated. Errors are caught so one failure does not stop the run. A summary at the end shows the total, created, skipped, and error counts. Every run is logged to a timestamped file. The function also supports `-WhatIf`, `-Confirm`, and labeled `-Verbose` messages.
 
-Full usage details are in `create-resourcegroup/README.md`.
+**`Get-ResourceGroupSummary`** *(added in 1.1.0)* is a read-only report of resource group name, location, and tags, for the whole subscription or for specific names. Tags are flattened to `Key=Value; Key=Value`. It accepts pipeline input by value or by the `ResourceGroupName` property, and a missing group produces a warning without stopping the rest.
+
+```powershell
+Get-ResourceGroupSummary | Format-Table
+'RG-1001', 'Dev1' | Get-ResourceGroupSummary
+```
+
+Full usage details are in `NWTC.ResourceGroups/Public/README.md`.
 
 ## Running the Tests
+
+**Module tests (current):**
+
+```powershell
+Invoke-Pester -Path .\NWTC.ResourceGroups\Tests -Output Detailed
+```
+
+13 tests cover the manifest, version, exports, private helper scope, help, and `Get-ResourceGroupSummary` behavior. Azure cmdlets are mocked with `Mock -ModuleName NWTC.ResourceGroups`, so no real resources are touched.
+
+**Standalone LM4 tests:**
 
 ```powershell
 Invoke-Pester .\create-resourcegroup\create-resourcegroup.tests.ps1 -Output Detailed
 ```
 
-The Azure cmdlets are mocked, so no real resources are created. These tests cover the standalone LM4 version; the module version was tested manually in LM5.
+These cover the standalone LM4 version of `New-TestResourceGroup`. They have not been ported into the module yet (see Known Issues in `RELEASENOTES.md`).
 
 ## Module History
 
@@ -55,6 +78,7 @@ The Azure cmdlets are mocked, so no real resources are created. These tests cove
 | LM3 | Advanced function with validation, tags, pipeline support, structured output, `-WhatIf`, and transcript logging |
 | LM4 | Parameter sets, bulk processing, labeled verbose messages, skip check, execution counters, run summary, and rewritten Pester tests |
 | LM5 | Packaged as the NWTC.ResourceGroups module: manifest (v1.0.0), Public/Private structure, controlled exports, private `Write-ModuleLog` helper replacing the transcript, array input for both parameters, and module documentation |
+| LM6 | Module lifecycle, released as v1.1.0: new `Get-ResourceGroupSummary` function, 13-test module Pester suite, semantic version bump, CHANGELOG, RELEASENOTES, function reference, upgrade testing, and a packaged release zip |
 
 ## Lessons Learned
 
@@ -91,3 +115,11 @@ The Azure cmdlets are mocked, so no real resources are created. These tests cove
 **LM5: Test the packaged version.** Testing the module found that `-ProjectID 1017, 1018` failed because the parameter was a single `[string]`. Changing it to `[string[]]` with a loop in `process` fixed it without changing pipeline behavior.
 
 **LM5: Git doesn't track empty folders.** The new module folders needed `.gitkeep` placeholder files to show up on GitHub.
+
+**LM6: The manifest has the final say on exports.** The `.psm1` loader picked up `Get-ResourceGroupSummary` automatically, but it wasn't visible until it was added to `FunctionsToExport` in the manifest. Both the loader and the manifest have to allow a function before users can see it.
+
+**LM6: Re-import before testing an upgrade.** PowerShell keeps the old version loaded in the session. Using `Remove-Module` and `Import-Module -Force` before testing proved 1.1.0 was actually what was running.
+
+**LM6: Mocks inside a module need `-ModuleName`.** `Get-AzResourceGroup` is called from inside the module, so the Pester mocks only work with `Mock -ModuleName NWTC.ResourceGroups`. Without it the tests would query real Azure.
+
+**LM6: A release is more than code.** The version number, changelog, release notes, and a tested package are what let someone else upgrade safely without asking what changed. Retesting the old function after adding the new one proved the "minor release" promise was kept.
