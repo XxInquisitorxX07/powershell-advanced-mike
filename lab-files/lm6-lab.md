@@ -46,3 +46,21 @@ Verification:
 | `'RG-1001' \| Get-ResourceGroupSummary` | Pipeline input works |
 | `-Name 'DoesNotExist'` | `[NOT FOUND]` warning, no crash |
 | Created `LM6-Test` with tags, then summarized it | `Owner=Mike; Project=LM6` |
+
+## Task 3: Semantic Versioning - 1.0.0 → 1.1.0
+
+Updated `ModuleVersion` in `NWTC.ResourceGroups.psd1` to `1.1.0` and added `ReleaseNotes` to the manifest's PSData section. Re-imported with `-Force`. `Get-Command -Module NWTC.ResourceGroups` now shows both functions at version 1.1.0.
+
+**Why this is a MINOR release:**
+Semantic versioning is MAJOR.MINOR.PATCH. This release adds new functionality (`Get-ResourceGroupSummary`) without changing anything that already existed. `New-TestResourceGroup` keeps the same name, parameters, and output, so any script written against 1.0.0 still works on 1.1.0. That backward-compatible addition is the definition of a minor bump.
+
+- **Not a patch (1.0.1):** patches are only for backward-compatible bug fixes. This release adds a feature.
+- **Not a major (2.0.0):** nothing was removed or renamed, and no parameter or output change breaks existing scripts.
+
+**Testing added:**
+The module `Tests` folder now holds `NWTC.ResourceGroups.Tests.ps1`, with 13 Pester tests:
+- Module checks: valid manifest, version 1.1.0, both functions exported, `Write-ModuleLog` stays private, help exists.
+- Get-ResourceGroupSummary: all groups, output properties, tag formatting, untagged groups, pipeline by value and by property, missing-group warning.
+- `Get-AzResourceGroup` is mocked with `Mock -ModuleName NWTC.ResourceGroups`, because the call happens inside the module. No Azure resources are touched.
+
+Result: `Tests Passed: 13, Failed: 0, Skipped: 0` (Pester v6.1.0, 3.06s)

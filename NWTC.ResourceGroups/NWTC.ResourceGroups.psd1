@@ -12,7 +12,7 @@
 RootModule = 'NWTC.ResourceGroups.psm1'
 
 # Version number of this module.
-ModuleVersion = '1.0.0'
+ModuleVersion = '1.1.0'
 
 # Supported PSEditions
 # CompatiblePSEditions = @()
@@ -107,7 +107,7 @@ PrivateData = @{
         # IconUri = ''
 
         # ReleaseNotes of this module
-        ReleaseNotes = '1.0.0 - Initial release. New-TestResourceGroup with ProjectID and ResourceGroupName parameter sets, array and pipeline input, skip check for existing groups, WhatIf support, and per-run logging through the private Write-ModuleLog helper.'
+        ReleaseNotes = 'v1.1.0: Added Get-ResourceGroupSummary, module Pester tests, changelog and release notes. See Docs/RELEASENOTES.md.'
 
         # Prerelease string of this module
         # Prerelease = ''
