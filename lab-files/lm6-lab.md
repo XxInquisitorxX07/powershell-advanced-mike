@@ -64,3 +64,13 @@ The module `Tests` folder now holds `NWTC.ResourceGroups.Tests.ps1`, with 13 Pes
 - `Get-AzResourceGroup` is mocked with `Mock -ModuleName NWTC.ResourceGroups`, because the call happens inside the module. No Azure resources are touched.
 
 Result: `Tests Passed: 13, Failed: 0, Skipped: 0` (Pester v6.1.0, 3.06s)
+
+
+## Task 4: Changelog
+
+Created `NWTC.ResourceGroups/Docs/CHANGELOG.md` following the Keep a Changelog format, with the newest version on top.
+
+- **1.1.0 (2026-10-03):** Added Get-ResourceGroupSummary, updated documentation, and improved testing (13-test Pester suite), plus the changelog, release notes, and release package.
+- **1.0.0 (2026-09-24):** Initial release. The date was pulled from git history with `git log --diff-filter=A --format=%as -- NWTC.ResourceGroups/NWTC.ResourceGroups.psd1`.
+
+Entries are grouped under **Added** and **Changed**, so an administrator can see what's new versus what was modified without reading the code. The changelog is the permanent history of the module. Each version gets an entry, and old entries are never removed.
