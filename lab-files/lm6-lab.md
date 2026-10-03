@@ -86,3 +86,30 @@ Created `NWTC.ResourceGroups/Docs/RELEASENOTES.md` covering:
 - **Known Issues:** hardcoded `centralus` location, LM4 tests not yet ported into the module, tags returned as a flattened string, and the Az/tenant requirement.
 
 Changelog vs. release notes: the changelog is the running history of every version. The release notes are written for the people upgrading to *this* version: what's new, how to upgrade safely, and what to watch out for.
+
+
+## Task 6: Upgrade Test Results
+
+Started clean with `Remove-Module`, then `Import-Module -Force`. That proves 1.1.0 loads fresh, rather than a 1.0.0 copy left in the session.
+
+| Check | Command | Result |
+|---|---|---|
+| Module loads | `Import-Module .\NWTC.ResourceGroups\NWTC.ResourceGroups.psd1 -Force` | No errors |
+| Version | `Get-Module NWTC.ResourceGroups` | 1.1.0, loaded from `C:\powershell-advanced-mike\NWTC.ResourceGroups` |
+| Exports | `Get-Command -Module NWTC.ResourceGroups` | Get-ResourceGroupSummary and New-TestResourceGroup, both 1.1.0 |
+| New feature | `Get-ResourceGroupSummary -Name 'RG-1001','Dev1','LM6-Test'` | All 3 returned with correct tags |
+| Missing group | `Get-ResourceGroupSummary -Name 'DoesNotExist'` | `[NOT FOUND]` warning, no crash |
+| Regression | `New-TestResourceGroup -ProjectID 9999 -WhatIf` | "What if" message, Status Skipped, nothing created |
+| Tests | `Invoke-Pester -Path .\NWTC.ResourceGroups\Tests` | 13 passed, 0 failed (1.08s) |
+
+Sample output:
+
+```
+ResourceGroupName Location  Tags
+----------------- --------  ----
+RG-1001           centralus Department=IT; Environment=Test
+Dev1              centralus Department=IT; Environment=Test
+LM6-Test          centralus Owner=Mike; Project=LM6
+```
+
+The regression check matters as much as testing the new feature. A minor release promises that existing functionality is unchanged, and running `New-TestResourceGroup` after the upgrade proves that promise was kept.
