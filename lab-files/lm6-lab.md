@@ -74,3 +74,15 @@ Created `NWTC.ResourceGroups/Docs/CHANGELOG.md` following the Keep a Changelog f
 - **1.0.0 (2026-09-24):** Initial release. The date was pulled from git history with `git log --diff-filter=A --format=%as -- NWTC.ResourceGroups/NWTC.ResourceGroups.psd1`.
 
 Entries are grouped under **Added** and **Changed**, so an administrator can see what's new versus what was modified without reading the code. The changelog is the permanent history of the module. Each version gets an entry, and old entries are never removed.
+
+
+## Task 5: Release Notes
+
+Created `NWTC.ResourceGroups/Docs/RELEASENOTES.md` covering:
+
+- **New Features:** Get-ResourceGroupSummary, with usage examples, and the 13-test Pester suite.
+- **Bug Fixes:** none in this release. It is stated honestly rather than left blank.
+- **Upgrade Instructions:** pull or extract, `Remove-Module` the old version, `Import-Module -Force` the new one, confirm 1.1.0 with `Get-Module` and `Get-Command`, then connect to the correct tenant.
+- **Known Issues:** hardcoded `centralus` location, LM4 tests not yet ported into the module, tags returned as a flattened string, and the Az/tenant requirement.
+
+Changelog vs. release notes: the changelog is the running history of every version. The release notes are written for the people upgrading to *this* version: what's new, how to upgrade safely, and what to watch out for.
