@@ -79,3 +79,24 @@ No warning this time, because `Import-DscResource` was included.
 | **Information observed** | A header with the target node (`localhost`), who generated it (`student`), when (10/05/2026 19:10:28), and on which host (`PA-mike`). One `instance of MSFT_RegistryResource` with `ResourceID = "[Registry]BaselineVersion"`, the key, value name, value type, `ValueData = {"1.0"}` (stored as an array), and `Ensure = "Present"`. `SourceInfo` points back to the exact line in `lm7-dsc.ps1` (line 19). An `OMI_ConfigurationDocument` block holds the configuration name and version metadata. |
 
 Compared to the example MOF: the example had two `MSFT_FileDirectoryConfiguration` instances linked by `DependsOn`. Mine has one `MSFT_RegistryResource` instance. Same structure, different resource class.
+
+
+## Task 4: Apply the Configuration
+
+    Start-DscConfiguration -Path C:\powershell-advanced-mike\DSC\MikeHagelBaseline -Wait -Verbose -Force
+
+`-Force` was used because `CompanyBaseline` was already the applied configuration.
+
+**Results (from verbose output):**
+- **Test:** `Registry key 'HKLM:\SOFTWARE\NWTC\Baseline' does not exist`. The system was out of compliance.
+- **Set:** `Create registry key 'HKLM:\SOFTWARE\NWTC\Baseline'`, then `Set registry key value ... BaselineVersion to '1.0' of type 'String'`.
+- Completed in 1.71 seconds with no errors or warnings. The Task 1 meta-configuration warning did not appear again.
+
+**Independent check:** not relying only on DSC's own report.
+
+| Command | Result |
+|---|---|
+| `Get-ItemProperty -Path 'HKLM:\SOFTWARE\NWTC\Baseline' -Name BaselineVersion` | `BaselineVersion : 1.0` |
+| `Test-Path C:\Automation\Config.txt` | `True` |
+
+**Observation:** the LCM holds one current configuration at a time. Applying `MikeHagelBaseline` replaced `CompanyBaseline`, but DSC did not delete `C:\Automation` or `Config.txt`. It simply stopped tracking them. A new configuration replaces what DSC *monitors*, not what exists on the machine. To keep the example's resources enforced, they would need to be part of the same configuration.
