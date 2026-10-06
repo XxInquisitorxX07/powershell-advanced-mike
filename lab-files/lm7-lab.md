@@ -52,3 +52,30 @@ Verbose output showed the LCM process each resource as **Test → Set**. The Tes
 | `Test-DscConfiguration` | `True` |
 | `Get-DscConfiguration` | Both resources `present`: `C:\Automation` (directory) and `C:\Automation\Config.txt` (file, 30 bytes) |
 | `Get-Content C:\Automation\Config.txt` | `NWTC Standard Configuration` |
+
+
+## Task 2: Create Your First DSC Configuration
+
+Created `DSC/lm7-dsc.ps1` with configuration `MikeHagelBaseline`:
+
+- `Import-DscResource -ModuleName PSDesiredStateConfiguration` loads the built-in resources explicitly. Best practice, and it removes the warning the class example produced.
+- Node: `localhost`
+- Resource: **`Registry BaselineVersion`**, a different resource type than the example's `File`. It ensures `HKEY_LOCAL_MACHINE\SOFTWARE\NWTC\Baseline` exists with a String value `BaselineVersion = 1.0`. This stamps the server with the baseline version it was built from, which an admin or audit can check.
+- A comment header documents what the configuration does and the compile/apply/verify commands.
+
+## Task 3: Generate and Review MOF Files
+
+Compiled in Windows PowerShell 5.1:
+
+    . .\DSC\lm7-dsc.ps1
+    MikeHagelBaseline -OutputPath C:\powershell-advanced-mike\DSC\MikeHagelBaseline
+
+No warning this time, because `Import-DscResource` was included.
+
+| Item | Detail |
+|---|---|
+| **File location** | `C:\powershell-advanced-mike\DSC\MikeHagelBaseline\localhost.mof` (2,216 bytes). The file is named after the node. |
+| **File purpose** | The compiled form of the configuration. The `.ps1` is the human-readable definition. The MOF is the standard document the Local Configuration Manager (LCM) actually reads and enforces. The LCM never sees the PowerShell code. |
+| **Information observed** | A header with the target node (`localhost`), who generated it (`student`), when (10/05/2026 19:10:28), and on which host (`PA-mike`). One `instance of MSFT_RegistryResource` with `ResourceID = "[Registry]BaselineVersion"`, the key, value name, value type, `ValueData = {"1.0"}` (stored as an array), and `Ensure = "Present"`. `SourceInfo` points back to the exact line in `lm7-dsc.ps1` (line 19). An `OMI_ConfigurationDocument` block holds the configuration name and version metadata. |
+
+Compared to the example MOF: the example had two `MSFT_FileDirectoryConfiguration` instances linked by `DependsOn`. Mine has one `MSFT_RegistryResource` instance. Same structure, different resource class.
