@@ -122,3 +122,30 @@ To see DSC detect and correct configuration drift, I changed the setting by hand
 | Confirm | `Test-DscConfiguration` / `Get-ItemProperty` | `True` / `BaselineVersion : 1.0` |
 
 `-UseExisting` re-applies the configuration the LCM already holds, with no recompile. DSC only changed the one setting that had drifted.
+
+
+## Task 6: Expand Your Baseline
+
+Added a second resource to `MikeHagelBaseline` and bumped the baseline stamp:
+
+- **`Service WindowsTime`:** ensures `W32Time` is `Running` with `StartupType = Automatic`. Accurate time is required for Kerberos authentication and for lining up log timestamps across servers during troubleshooting or an investigation.
+- **`Registry BaselineVersion`:** `ValueData` changed from `1.0` to `1.1`. Adding a resource is a backward-compatible addition to the baseline, so it's a minor version bump, the same semantic versioning rule as the LM6 module release. The registry now tells anyone which baseline version a server has.
+- Added a baseline history block to the comment header in `lm7-dsc.ps1`.
+
+**Before:** `W32Time` was already `Running` / `Automatic`. `BaselineVersion` was `1.0`.
+
+**Recompile and redeploy:** the MOF grew from 2,216 to 2,968 bytes with the new `MSFT_ServiceResource` instance.
+
+**Results (verbose):**
+- `[Registry]BaselineVersion`: Test reported `does not contain data '1.1'`, then Set changed it to `1.1`.
+- `[Service]WindowsTime`: Test queried `Win32_Service` for `W32Time`, found it already compliant, then **Skip Set**. DSC only changes what is out of compliance.
+
+**After:**
+
+| Command | Result |
+|---|---|
+| `Test-DscConfiguration -Detailed` | `InDesiredState: True`, both resources in desired state |
+| `Get-Service W32Time` | `Running` / `Automatic` |
+| `Get-ItemProperty ... BaselineVersion` | `1.1` |
+
+**Lesson:** the first redeploy compiled the *old* configuration, with the same MOF size (2,216 bytes) and only the Registry resource, because `lm7-dsc.ps1` hadn't been saved after editing. Dot-sourcing reads the file on disk, not the editor. The MOF size and the resources listed in the verbose output are a quick way to confirm the right version compiled.
