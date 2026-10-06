@@ -100,3 +100,25 @@ Compared to the example MOF: the example had two `MSFT_FileDirectoryConfiguratio
 | `Test-Path C:\Automation\Config.txt` | `True` |
 
 **Observation:** the LCM holds one current configuration at a time. Applying `MikeHagelBaseline` replaced `CompanyBaseline`, but DSC did not delete `C:\Automation` or `Config.txt`. It simply stopped tracking them. A new configuration replaces what DSC *monitors*, not what exists on the machine. To keep the example's resources enforced, they would need to be part of the same configuration.
+
+
+## Task 5: Validate Compliance
+
+| Command | Result |
+|---|---|
+| `Test-DscConfiguration` | `True` |
+| `Get-DscConfiguration` | `MikeHagelBaseline`: `[Registry]BaselineVersion`, key `HKLM:\SOFTWARE\NWTC\Baseline`, `ValueData {1.0}`, `ValueType String`, `Ensure Present` |
+
+### Drift Test (extra)
+
+To see DSC detect and correct configuration drift, I changed the setting by hand, the way an admin might on a live server:
+
+    Set-ItemProperty -Path 'HKLM:\SOFTWARE\NWTC\Baseline' -Name BaselineVersion -Value '0.9'
+
+| Step | Command | Result |
+|---|---|---|
+| Detect | `Test-DscConfiguration -Detailed` | `InDesiredState: False`, `ResourcesNotInDesiredState: {[Registry]BaselineVersion}` |
+| Correct | `Start-DscConfiguration -UseExisting -Wait -Verbose` | Test: `does not contain data '1.0'`, then Set: `Set registry key value ... to '1.0'`. Completed in 0.48 seconds |
+| Confirm | `Test-DscConfiguration` / `Get-ItemProperty` | `True` / `BaselineVersion : 1.0` |
+
+`-UseExisting` re-applies the configuration the LCM already holds, with no recompile. DSC only changed the one setting that had drifted.
